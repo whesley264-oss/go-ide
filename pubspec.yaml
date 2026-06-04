@@ -1,0 +1,19 @@
+name: flutter_go_ide
+description: A native Go IDE for Android.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_code_editor: ^0.10.0
+  google_fonts: ^6.1.0
+  process_run: ^0.13.0
+  flutter_secure_storage: ^9.0.0
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
