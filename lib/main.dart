@@ -34,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
         title: const Text('Go IDE Nativo'),
         actions: [
           IconButton(
-            icon: Icon(_showGit ? Icons.folder_open : Icons.git_branch),
+            icon: Icon(_showGit ? Icons.folder_open : Icons.call_split),
             onPressed: () => setState(() => _showGit = !_showGit),
           )
         ],
