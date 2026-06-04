@@ -14,6 +14,8 @@ jobs:
           channel: 'stable'
       - name: Install dependencies
         run: flutter pub get
+      - name: Create native scaffolding
+        run: flutter create .
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK

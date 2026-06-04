@@ -17,17 +17,37 @@ class GoIDE extends StatelessWidget {
   }
 }
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  bool _showGit = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Go IDE Nativo')),
+      appBar: AppBar(
+        title: const Text('Go IDE Nativo'),
+        actions: [
+          IconButton(
+            icon: Icon(_showGit ? Icons.folder_open : Icons.git_branch),
+            onPressed: () => setState(() => _showGit = !_showGit),
+          )
+        ],
+      ),
       body: Row(
         children: [
-          const Expanded(flex: 1, child: GitPanel()),
-          Expanded(flex: 3, child: EditorArea()),
+          if (_showGit)
+            Container(
+              width: 250,
+              decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade800))),
+              child: const GitPanel(),
+            ),
+          Expanded(child: EditorArea()),
         ],
       ),
     );
