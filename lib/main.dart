@@ -42,15 +42,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final FileService _fileService = FileService();
   final CodeExecutionService _executionService = CodeExecutionService();
+  final GlobalKey<TerminalWidgetState> _terminalKey = GlobalKey();
   
   String? _currentFilePath;
   String _currentContent = '';
   String _unsavedContent = '';
-  
-  final GlobalKey<_FileExplorerState> _explorerKey = GlobalKey();
-  final GlobalKey<_TerminalPanelState> _terminalKey = GlobalKey();
-  final GlobalKey<_EditorPanelState> _editorKey = GlobalKey();
-  
+
   bool _showExplorer = true;
   bool _showTerminal = false;
   double _explorerWidth = 220;
@@ -62,13 +59,10 @@ class _MainScreenState extends State<MainScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // App bar
             _buildAppBar(),
-            // Main content
             Expanded(
               child: Row(
                 children: [
-                  // File Explorer
                   if (_showExplorer)
                     GestureDetector(
                       onHorizontalDragUpdate: (details) {
@@ -80,7 +74,6 @@ class _MainScreenState extends State<MainScreen> {
                       child: SizedBox(
                         width: _explorerWidth,
                         child: FileExplorer(
-                          key: _explorerKey,
                           selectedPath: _currentFilePath,
                           onFileOpen: (path, content) {
                             setState(() {
@@ -92,41 +85,20 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                       ),
                     ),
-                  // Resize handle
-                  if (_showExplorer)
-                    GestureDetector(
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _explorerWidth -= details.delta.dx;
-                          _explorerWidth = _explorerWidth.clamp(150, 400);
-                        });
-                      },
-                      child: Container(
-                        width: 4,
-                        color: Colors.transparent,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.white12,
-                        ),
-                      ),
-                    ),
-                  // Editor + Terminal
                   Expanded(
                     child: Column(
                       children: [
                         Expanded(
                           child: EditorPanel(
-                            key: _editorKey,
                             filePath: _currentFilePath,
                             initialContent: _currentContent,
                             onContentChanged: (content) {
-                              _unsavedContent = content;
+                              setState(() => _unsavedContent = content);
                             },
                             onSave: _saveFile,
                             onRun: _runCode,
                           ),
                         ),
-                        // Resize handle for terminal
                         if (_showTerminal)
                           GestureDetector(
                             onVerticalDragUpdate: (details) {
@@ -147,11 +119,10 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                             ),
                           ),
-                        // Terminal
                         if (_showTerminal)
                           SizedBox(
                             height: _terminalHeight,
-                            child: TerminalPanel(key: _terminalKey),
+                            child: TerminalWidget(key: _terminalKey),
                           ),
                       ],
                     ),
@@ -159,7 +130,6 @@ class _MainScreenState extends State<MainScreen> {
                 ],
               ),
             ),
-            // Status bar
             _buildStatusBar(),
           ],
         ),
@@ -182,26 +152,13 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(width: 8),
           const Text(
             'Code Editor',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(
-              _showTerminal ? Icons.terminal : Icons.terminal_outlined,
-              size: 22,
-            ),
+            icon: Icon(_showTerminal ? Icons.terminal : Icons.terminal_outlined, size: 22),
             onPressed: () => setState(() => _showTerminal = !_showTerminal),
             tooltip: 'Toggle Terminal',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 22),
-            onPressed: () {
-              // Refresh explorer
-            },
-            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -216,7 +173,7 @@ class _MainScreenState extends State<MainScreen> {
       child: Row(
         children: [
           if (_currentFilePath != null) ...[
-            Icon(Icons.description, size: 14, color: Colors.white.withOpacity(0.8)),
+            const Icon(Icons.description, size: 14, color: Colors.white70),
             const SizedBox(width: 4),
             Text(
               _currentFilePath!.split('/').last,
@@ -226,7 +183,7 @@ class _MainScreenState extends State<MainScreen> {
           ],
           const Spacer(),
           Text(
-            'Dart 3 | UTF-8 |Ln 1, Col 1',
+            'Dart 3 | UTF-8',
             style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7)),
           ),
         ],
@@ -236,16 +193,12 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _saveFile() async {
     if (_currentFilePath == null) return;
-    
     try {
       await _fileService.writeFile(_currentFilePath!, _unsavedContent);
       setState(() => _currentContent = _unsavedContent);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File saved'),
-            duration: Duration(seconds: 1),
-          ),
+          const SnackBar(content: Text('File saved'), duration: Duration(seconds: 1)),
         );
       }
     } catch (e) {
@@ -259,40 +212,27 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _runCode() async {
     if (_currentFilePath == null) {
-      // Need to save first
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please save the file first')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please save the file first')),
+        );
+      }
       return;
     }
     
-    // Show terminal if hidden
-    if (!_showTerminal) {
-      setState(() => _showTerminal = true);
-    }
+    if (!_showTerminal) setState(() => _showTerminal = true);
     
-    // Get terminal and write running message
-    final terminal = _terminalKey.currentState;
-    terminal?.writeOutput('Running ${_currentFilePath!.split('/').last}...');
+    _terminalKey.currentState?.write('Running ${_currentFilePath!.split('/').last}...\n');
     
-    // Execute
     final result = await _executionService.execute(
       _currentFilePath!,
-      onOutput: (data) {
-        terminal?.writeOutput(data);
-      },
+      onOutput: (data) => _terminalKey.currentState?.write('$data'),
     );
     
-    // Show result
     if (result.exitCode == 0) {
-      terminal?.writeOutput('\n\x1b[32m✓ Done in ${result.duration.inMilliseconds}ms\x1b[0m');
+      _terminalKey.currentState?.write('✓ Done in ${result.duration.inMilliseconds}ms\n');
     } else {
-      terminal?.writeError('\n\x1b[31m✗ Exit code: ${result.exitCode}\x1b[0m');
+      _terminalKey.currentState?.write('✗ Exit code: ${result.exitCode}\n');
     }
   }
 }
-
-// Type alias for the explorer state key
-class _FileExplorerState extends State<FileExplorer> {}
-class _TerminalPanelState extends State<TerminalPanel> {}
-class _EditorPanelState extends State<EditorPanel> {}

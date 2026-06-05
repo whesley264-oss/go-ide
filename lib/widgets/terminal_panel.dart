@@ -1,39 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:xterm/xterm.dart';
 import '../themes/app_theme.dart';
 
-class TerminalPanel extends StatefulWidget {
-  const TerminalPanel({super.key});
+class TerminalWidget extends StatefulWidget {
+  const TerminalWidget({super.key});
 
   @override
-  State<TerminalPanel> createState() => _TerminalPanelState();
+  State<TerminalWidget> createState() => TerminalWidgetState();
 }
 
-class _TerminalPanelState extends State<TerminalPanel> {
-  late Terminal _terminal;
-  late TerminalController _terminalController;
+class TerminalWidgetState extends State<TerminalWidget> {
+  String _buffer = '';
+  final ScrollController _scrollController = ScrollController();
+  
+  void write(String text) {
+    setState(() => _buffer += text);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+  
+  void clear() {
+    setState(() => _buffer = '');
+  }
 
   @override
-  void initState() {
-    super.initState();
-    _terminal = Terminal(maxLines: 10000);
-    _terminalController = TerminalController();
-    _terminal.write('Terminal ready. Use Run button to execute code.\r\n');
-    _terminal.write('\x1b[32m$\x1b[0m ');
-  }
-
-  void writeOutput(String text) {
-    _terminal.write(text);
-    _terminal.write('\r\n\x1b[32m$\x1b[0m ');
-  }
-
-  void writeError(String text) {
-    _terminal.write('\x1b[31m$text\x1b[0m\r\n\x1b[32m$\x1b[0m ');
-  }
-
-  void clear() {
-    _terminal.buffer.clear();
-    _terminal.write('Terminal cleared.\r\n\x1b[32m$\x1b[0m ');
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -69,14 +68,16 @@ class _TerminalPanelState extends State<TerminalPanel> {
             ),
           ),
           Expanded(
-            child: Padding(
+            child: SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(8),
-              child: TerminalView(
-                _terminal,
-                controller: _terminalController,
-                textStyle: const TerminalStyle(
-                  fontSize: 13,
+              child: Text(
+                _buffer.isEmpty ? 'Terminal ready.\n> ' : _buffer,
+                style: const TextStyle(
                   fontFamily: 'monospace',
+                  fontSize: 13,
+                  color: Colors.white70,
+                  height: 1.4,
                 ),
               ),
             ),
