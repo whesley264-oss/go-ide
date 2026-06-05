@@ -10,9 +10,11 @@ dependencies:
     sdk: flutter
   flutter_code_editor: ^0.3.5
   google_fonts: ^6.1.0
+  file_picker: ^8.0.0
+  path_provider: ^2.1.2
   process_run: ^0.13.0
-  flutter_secure_storage: ^9.0.0
-  http: ^1.2.0
+  xterm: ^0.1.0
+  font_awesome_flutter: ^10.7.0
 
 dev_dependencies:
   flutter_test:

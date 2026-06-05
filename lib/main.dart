@@ -1,69 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
-import 'git_panel.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-void main() => runApp(const GoIDE());
+void main() => runApp(const ProIDE());
 
-class GoIDE extends StatelessWidget {
-  const GoIDE({super.key});
+class ProIDE extends StatelessWidget {
+  const ProIDE({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
-      home: const MainScreen(),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+        textTheme: GoogleFonts.firaCodeTextTheme(ThemeData.dark().textTheme),
+      ),
+      home: const MainLayout(),
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class MainLayout extends StatefulWidget {
+  const MainLayout({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainLayout> createState() => _MainLayoutState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  bool _showGit = true;
-
+class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Go IDE Nativo'),
-        actions: [
-          IconButton(
-            icon: Icon(_showGit ? Icons.folder_open : Icons.call_split),
-            onPressed: () => setState(() => _showGit = !_showGit),
-          )
-        ],
-      ),
       body: Row(
         children: [
-          if (_showGit)
-            Container(
-              width: 250,
-              decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade800))),
-              child: const GitPanel(),
+          // Sidebar
+          Container(
+            width: 200,
+            color: const Color(0xFF252526),
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('EXPLORER', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ),
+                Expanded(child: ListView(children: const [ListTile(leading: Icon(Icons.description), title: Text('main.go'))])),
+              ],
             ),
-          Expanded(child: EditorArea()),
+          ),
+          // Editor
+          Expanded(
+            child: CodeField(
+              controller: CodeController(text: 'package main\n\nfunc main() {\n  println("Pro IDE Mobile!")\n}'),
+            ),
+          ),
         ],
       ),
     );
-  }
-}
-
-class EditorArea extends StatefulWidget {
-  @override
-  State<EditorArea> createState() => _EditorAreaState();
-}
-
-class _EditorAreaState extends State<EditorArea> {
-  final _codeController = CodeController(text: 'package main\n\nfunc main() {\n  println("Hello!")\n}');
-
-  @override
-  Widget build(BuildContext context) {
-    return CodeField(controller: _codeController);
   }
 }
