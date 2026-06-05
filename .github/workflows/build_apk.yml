@@ -21,23 +21,42 @@ jobs:
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Convert .kts files to .gradle
+          # Convert ALL .kts files to .gradle with proper syntax conversion
           for f in $(find android -name "*.gradle.kts" -type f 2>/dev/null); do
             echo "Converting $f to .gradle"
-            # Remove import statements
-            sed -i '/^import /d' "$f"
-            # Replace compileSdk
-            sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
-            # Convert to .gradle
-            mv "$f" "${f%.kts}"
+            base="${f%.kts}"
+            
+            # Use Python for proper Kotlin to Groovy conversion
+            python3 << PYEOF
+import re
+
+with open("$f", "r") as file:
+    content = file.read()
+
+# Remove import statements
+content = re.sub(r"^import .*$", "", content, flags=re.MULTILINE)
+
+# Convert val to def
+content = re.sub(r"\bval\b", "def", content)
+
+# Convert function call syntax: foo("bar") -> foo = "bar" for simple cases
+# But be careful with function calls like plugins { }
+
+# Convert compileSdk(flutter.compileSdkVersion) to compileSdk 36
+content = re.sub(r"compileSdk\(flutter\.compileSdkVersion\)", "compileSdk 36", content)
+
+# Write to .gradle file
+with open("$base", "w") as file:
+    file.write(content)
+
+print(f"Converted $f to $base")
+PYEOF
+            rm -f "$f"
           done
           
           # Now process all .gradle files
           for f in $(find android -name "*.gradle" -type f 2>/dev/null); do
             echo "Processing $f"
-            # Remove import statements (for any remaining)
-            sed -i '/^import /d' "$f"
-            # Replace compileSdk
             sed -i 's/compileSdk flutter\.compileSdkVersion/compileSdk 36/g' "$f"
             sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
           done
