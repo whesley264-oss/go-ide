@@ -20,14 +20,17 @@ jobs:
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Use find to locate the file, in case it's in a different path
-          GRADLE_FILE=$(find . -name build.gradle | grep android/app/build.gradle | head -n 1)
-          if [ -f "$GRADLE_FILE" ]; then
+          # Find the gradle file using -path to properly match the path pattern
+          GRADLE_FILE=$(find . -type f -path "*/android/app/build.gradle" -name "build.gradle" 2>/dev/null | head -n 1)
+          if [ -n "$GRADLE_FILE" ] && [ -f "$GRADLE_FILE" ]; then
             echo "Gradle file found at $GRADLE_FILE"
             sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' "$GRADLE_FILE"
             sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' "$GRADLE_FILE"
           else
             echo "Gradle file not found!"
+            echo "Directory contents:"
+            find . -type f -name "*.gradle" 2>/dev/null || echo "No gradle files found"
+            find . -type d -name "android" 2>/dev/null || echo "No android directories found"
             exit 1
           fi
       - name: Build APK
