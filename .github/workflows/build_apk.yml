@@ -18,6 +18,16 @@ jobs:
         run: flutter create .
       - name: Inject Android Build Config
         run: |
+          # Wait for file to exist
+          for i in {1..10}; do
+            if [ -f android/app/build.gradle ]; then
+              echo "Gradle file found!"
+              break
+            fi
+            echo "Waiting for Gradle file..."
+            sleep 2
+          done
+          
           # Inject compileSdk 36 and 32-bit ABI filters
           sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' android/app/build.gradle
           sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
