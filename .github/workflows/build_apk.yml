@@ -21,15 +21,25 @@ jobs:
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Update ALL build.gradle files to use compileSdk 36
-          find android -name "*.gradle*" -type f 2>/dev/null | while read f; do
-            echo "Processing $f"
-            # Remove all import statements
+          # Convert .kts files to .gradle
+          for f in $(find android -name "*.gradle.kts" -type f 2>/dev/null); do
+            echo "Converting $f to .gradle"
+            # Remove import statements
             sed -i '/^import /d' "$f"
-            # Replace compileSdk(flutter.compileSdkVersion) with compileSdk 36
+            # Replace compileSdk
             sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
-            # Also handle kotlin.dsl style if present
-            sed -i 's/compileSdkVersion(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
+            # Convert to .gradle
+            mv "$f" "${f%.kts}"
+          done
+          
+          # Now process all .gradle files
+          for f in $(find android -name "*.gradle" -type f 2>/dev/null); do
+            echo "Processing $f"
+            # Remove import statements (for any remaining)
+            sed -i '/^import /d' "$f"
+            # Replace compileSdk
+            sed -i 's/compileSdk flutter\.compileSdkVersion/compileSdk 36/g' "$f"
+            sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
           done
           
           if [ -f android/app/build.gradle ]; then
@@ -40,11 +50,11 @@ jobs:
             if ! grep -q "ndk {" android/app/build.gradle; then
               sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
             fi
-            echo "build.gradle content:"
+            echo "=== Final build.gradle content ==="
             cat android/app/build.gradle
           else
             echo "ERROR: Gradle file not found!"
-            ls -la android/app/ 2>/dev/null || echo "android/app not found"
+            ls -la android/app/ 2>/dev/null
             exit 1
           fi
       - name: Build APK
