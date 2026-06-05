@@ -19,6 +19,29 @@ jobs:
           rm -rf android ios windows macos linux
           flutter create --platforms android,ios,windows,macos,linux .
           ls -la android/
+      - name: Configure Android SDK
+        run: |
+          # Update allprojects in root build.gradle to force compileSdk 36
+          if [ -f android/build.gradle ]; then
+            # Add to subprojects block to force compileSdk
+            if ! grep -q "subprojects" android/build.gradle; then
+              cat >> android/build.gradle << 'SUBDELIM'
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                if (namespace != null) {
+                    compileSdkVersion 36
+                }
+            }
+        }
+    }
+}
+SUBDELIM
+            fi
+          fi
+          cat android/build.gradle
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK
