@@ -21,31 +21,31 @@ jobs:
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Convert .kts files to .gradle
+          # Convert .kts files to .gradle using shell
           for f in $(find android -name "*.gradle.kts" -type f 2>/dev/null); do
             echo "Converting $f"
             base="${f%.kts}"
-            # Write Python script that uses specific file path
-            cat > /tmp/convert_gradle.py << "PYEOF"
-import re
-import sys
-input_file = sys.argv[1]
-output_file = sys.argv[2]
-with open(input_file, "r") as f:
-    content = f.read()
-content = re.sub(r"^import .*$", "", content, flags=re.MULTILINE)
-content = re.sub(r"\bval\b", "def", content)
-content = re.sub(r"compileSdk\(flutter\.compileSdkVersion\)", "compileSdk 36", content)
-with open(output_file, "w") as f:
-    f.write(content)
-print(f"Converted {input_file} to {output_file}")
-PYEOF
-            python3 /tmp/convert_gradle.py "$f" "$base"
-            rm -f "$f" /tmp/convert_gradle.py
+            
+            # Remove import statements
+            sed -i '/^import /d' "$f"
+            
+            # Convert val to def: val foo = -> def foo =
+            # This regex handles val followed by identifier and =
+            sed -i 's/val \+\([a-zA-Z_][a-zA-Z0-9_]*\) *= *\(.*\)$/def \1 = \2/' "$f"
+            
+            # Convert compileSdk(flutter.compileSdkVersion) to compileSdk 36
+            sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
+            
+            # Move to .gradle
+            mv "$f" "$base"
           done
           
           # Process .gradle files
           for f in $(find android -name "*.gradle" -type f 2>/dev/null); do
+            echo "Processing $f"
+            # Remove any remaining import statements
+            sed -i '/^import /d' "$f"
+            # Replace compileSdk patterns
             sed -i 's/compileSdk flutter\.compileSdkVersion/compileSdk 36/g' "$f"
             sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' "$f"
           done
