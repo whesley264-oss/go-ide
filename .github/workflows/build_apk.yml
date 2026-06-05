@@ -15,22 +15,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Create native scaffolding
-        run: flutter create .
+        run: |
+          flutter create .
+          ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Wait for file to exist
-          for i in {1..10}; do
-            if [ -f android/app/build.gradle ]; then
-              echo "Gradle file found!"
-              break
-            fi
-            echo "Waiting for Gradle file..."
-            sleep 2
-          done
-          
-          # Inject compileSdk 36 and 32-bit ABI filters
-          sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' android/app/build.gradle
-          sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
+          # Use find to locate the file, in case it's in a different path
+          GRADLE_FILE=$(find . -name build.gradle | grep android/app/build.gradle | head -n 1)
+          if [ -f "$GRADLE_FILE" ]; then
+            echo "Gradle file found at $GRADLE_FILE"
+            sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' "$GRADLE_FILE"
+            sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' "$GRADLE_FILE"
+          else
+            echo "Gradle file not found!"
+            exit 1
+          fi
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK
