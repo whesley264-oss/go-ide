@@ -16,13 +16,11 @@ jobs:
         run: flutter pub get
       - name: Create native scaffolding
         run: flutter create .
-      - name: Inject 32-bit support
+      - name: Inject Android Build Config
         run: |
-          if [ -f android/app/build.gradle ]; then
-            sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
-          else
-            echo "Gradle file not found, skipping injection"
-          fi
+          # Inject compileSdk 36 and 32-bit ABI filters
+          sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' android/app/build.gradle
+          sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK
