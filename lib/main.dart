@@ -4,6 +4,7 @@ import 'themes/app_theme.dart';
 import 'widgets/file_explorer.dart';
 import 'widgets/editor_panel.dart';
 import 'widgets/terminal_panel.dart';
+import 'widgets/git_panel.dart';
 import 'services/file_service.dart';
 import 'services/code_execution_service.dart';
 
@@ -50,6 +51,7 @@ class _MainScreenState extends State<MainScreen> {
 
   bool _showExplorer = true;
   bool _showTerminal = false;
+  bool _showGit = false;
   double _explorerWidth = 220;
   double _terminalHeight = 200;
 
@@ -63,28 +65,22 @@ class _MainScreenState extends State<MainScreen> {
             Expanded(
               child: Row(
                 children: [
-                  if (_showExplorer)
-                    GestureDetector(
-                      onHorizontalDragUpdate: (details) {
+                  // Left sidebar (Explorer or Git)
+                  if (_showExplorer && !_showGit)
+                    _buildLeftSidebar(FileExplorer(
+                      selectedPath: _currentFilePath,
+                      onFileOpen: (path, content) {
                         setState(() {
-                          _explorerWidth -= details.delta.dx;
-                          _explorerWidth = _explorerWidth.clamp(150, 400);
+                          _currentFilePath = path;
+                          _currentContent = content;
+                          _unsavedContent = content;
                         });
                       },
-                      child: SizedBox(
-                        width: _explorerWidth,
-                        child: FileExplorer(
-                          selectedPath: _currentFilePath,
-                          onFileOpen: (path, content) {
-                            setState(() {
-                              _currentFilePath = path;
-                              _currentContent = content;
-                              _unsavedContent = content;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
+                    ))
+                  else if (_showGit)
+                    _buildLeftSidebar(GitPanel(repoPath: _currentFilePath?.substring(0, _currentFilePath!.lastIndexOf('/')))),
+                  
+                  // Main editor + terminal
                   Expanded(
                     child: Column(
                       children: [
@@ -120,10 +116,7 @@ class _MainScreenState extends State<MainScreen> {
                             ),
                           ),
                         if (_showTerminal)
-                          SizedBox(
-                            height: _terminalHeight,
-                            child: TerminalWidget(key: _terminalKey),
-                          ),
+                          SizedBox(height: _terminalHeight, child: TerminalWidget(key: _terminalKey)),
                       ],
                     ),
                   ),
@@ -137,6 +130,18 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Widget _buildLeftSidebar(Widget child) {
+    return GestureDetector(
+      onHorizontalDragUpdate: (details) {
+        setState(() {
+          _explorerWidth -= details.delta.dx;
+          _explorerWidth = _explorerWidth.clamp(150, 400);
+        });
+      },
+      child: SizedBox(width: _explorerWidth, child: child),
+    );
+  }
+
   Widget _buildAppBar() {
     return Container(
       height: 48,
@@ -146,14 +151,16 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           IconButton(
             icon: Icon(_showExplorer ? Icons.menu_open : Icons.menu, size: 22),
-            onPressed: () => setState(() => _showExplorer = !_showExplorer),
+            onPressed: () => setState(() { _showExplorer = !_showExplorer; _showGit = false; }),
             tooltip: 'Toggle Explorer',
           ),
-          const SizedBox(width: 8),
-          const Text(
-            'Code Editor',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          IconButton(
+            icon: Icon(_showGit ? Icons.source : Icons.source_outlined, size: 22, color: _showGit ? Colors.orange : null),
+            onPressed: () => setState(() { _showGit = !_showGit; if (_showGit) _showExplorer = false; }),
+            tooltip: 'Toggle Git',
           ),
+          const SizedBox(width: 8),
+          const Text('Code Editor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
           const Spacer(),
           IconButton(
             icon: Icon(_showTerminal ? Icons.terminal : Icons.terminal_outlined, size: 22),
@@ -175,17 +182,11 @@ class _MainScreenState extends State<MainScreen> {
           if (_currentFilePath != null) ...[
             const Icon(Icons.description, size: 14, color: Colors.white70),
             const SizedBox(width: 4),
-            Text(
-              _currentFilePath!.split('/').last,
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
-            ),
+            Text(_currentFilePath!.split('/').last, style: const TextStyle(fontSize: 12, color: Colors.white70)),
             const SizedBox(width: 16),
           ],
           const Spacer(),
-          Text(
-            'Dart 3 | UTF-8',
-            style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7)),
-          ),
+          Text('Dart 3 | UTF-8', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
         ],
       ),
     );
@@ -196,43 +197,24 @@ class _MainScreenState extends State<MainScreen> {
     try {
       await _fileService.writeFile(_currentFilePath!, _unsavedContent);
       setState(() => _currentContent = _unsavedContent);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File saved'), duration: Duration(seconds: 1)),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File saved'), duration: Duration(seconds: 1)));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving file: $e')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   Future<void> _runCode() async {
     if (_currentFilePath == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please save the file first')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please save the file first')));
       return;
     }
-    
     if (!_showTerminal) setState(() => _showTerminal = true);
-    
     _terminalKey.currentState?.write('Running ${_currentFilePath!.split('/').last}...\n');
-    
-    final result = await _executionService.execute(
-      _currentFilePath!,
-      onOutput: (data) => _terminalKey.currentState?.write('$data'),
-    );
-    
+    final result = await _executionService.execute(_currentFilePath!, onOutput: (data) => _terminalKey.currentState?.write('$data'));
     if (result.exitCode == 0) {
-      _terminalKey.currentState?.write('✓ Done in ${result.duration.inMilliseconds}ms\n');
+      _terminalKey.currentState?.write('Done in ${result.duration.inMilliseconds}ms\n');
     } else {
-      _terminalKey.currentState?.write('✗ Exit code: ${result.exitCode}\n');
+      _terminalKey.currentState?.write('Exit code: ${result.exitCode}\n');
     }
   }
 }
