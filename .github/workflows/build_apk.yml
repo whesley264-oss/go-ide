@@ -16,56 +16,28 @@ jobs:
         run: flutter pub get
       - name: Create native scaffolding
         run: |
-          # Remove existing platform directories to force fresh creation
           rm -rf android ios windows macos linux
-          # Create project with all platforms
           flutter create --platforms android,ios,windows,macos,linux .
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Convert Kotlin DSL to Groovy DSL if needed
           if [ -f android/app/build.gradle.kts ]; then
-            echo "Converting Kotlin DSL (.kts) to Groovy DSL (.gradle)"
-            python3 << 'PYEOF'
-import re
-
-with open('android/app/build.gradle.kts', 'r') as f:
-    content = f.read()
-
-# Remove import statements  
-content = re.sub(r'^import .*$', '', content, flags=re.MULTILINE)
-
-# Convert function calls to assignments:
-# namespace("com.example.app") -> namespace = "com.example.app"
-content = re.sub(r'(\w+)\("([^"]+)"\)', r'\1 = "\2"', content)
-
-# Convert compileSdk(flutter.compileSdkVersion) -> compileSdk 36
-content = re.sub(r'compileSdk\(flutter\.compileSdkVersion\)', 'compileSdk 36', content)
-
-# Convert ndk { abiFilters(...) } to proper Groovy format
-# For now, remove the ndk block since it's causing issues
-content = re.sub(r'ndk\s*\{[^}]*abiFilters\s*\([^)]*\)[^}]*\}', 'ndk { abiFilters "armeabi-v7a", "arm64-v8a", "x86_64" }', content)
-
-with open('android/app/build.gradle', 'w') as f:
-    f.write(content)
-
-print("Converted build.gradle.kts to build.gradle")
-PYEOF
-            rm -f android/app/build.gradle.kts
+            echo "Converting Kotlin DSL to Groovy DSL"
+            sed -i '/^import /d' android/app/build.gradle.kts
+            sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/g' android/app/build.gradle.kts
+            mv android/app/build.gradle.kts android/app/build.gradle
+            echo "Converted .kts to .gradle"
           fi
           
           if [ -f android/app/build.gradle ]; then
-            echo "Gradle file found at android/app/build.gradle"
-            # Ensure compileSdk is set to 36
-            sed -i 's/compileSdk flutter\.compileSdkVersion/compileSdk 36/' android/app/build.gradle
-            sed -i 's/compileSdk(flutter\.compileSdkVersion)/compileSdk 36/' android/app/build.gradle
-            # Ensure ndk block exists
+            echo "Configuring build.gradle"
+            sed -i 's/compileSdk flutter\.compileSdkVersion/compileSdk 36/g' android/app/build.gradle
             if ! grep -q "ndk {" android/app/build.gradle; then
               sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' android/app/build.gradle
             fi
           else
             echo "ERROR: Gradle file not found!"
-            ls -la android/app/ 2>/dev/null || echo "android/app directory not found"
+            ls -la android/app/ 2>/dev/null || echo "android/app not found"
             exit 1
           fi
       - name: Build APK
