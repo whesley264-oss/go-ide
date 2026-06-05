@@ -149,15 +149,7 @@ class _FileExplorerState extends State<FileExplorer> {
   Widget _buildFile(FileItem item, int depth) {
     final isSelected = widget.selectedPath == item.path;
     return InkWell(
-      onTap: () async {
-        // Open ANY file in the editor (not just code files)
-        try {
-          final content = await _fileService.readFile(item.path);
-          widget.onFileOpen?.call(item.path, content);
-        } catch (e) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-        }
-      },
+      onTap: () => _openFile(item),
       onLongPress: () => _showContextMenu(item),
       child: Container(
         padding: EdgeInsets.only(left: depth * 16.0 + 20),
@@ -171,6 +163,19 @@ class _FileExplorerState extends State<FileExplorer> {
         ),
       ),
     );
+  }
+
+  Future<void> _openFile(FileItem item) async {
+    try {
+      final content = await _fileService.readFile(item.path);
+      if (widget.onFileOpen != null) {
+        widget.onFileOpen!(item.path, content);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+      }
+    }
   }
 
   IconData _getFileIcon(FileItem item) {
@@ -225,9 +230,7 @@ class _FileExplorerState extends State<FileExplorer> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: InputDecoration(
-            hintText: createFolder ? 'folder name' : 'filename.txt',
-          ),
+          decoration: InputDecoration(hintText: createFolder ? 'folder name' : 'filename.txt'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -239,12 +242,9 @@ class _FileExplorerState extends State<FileExplorer> {
               String name = controller.text.trim();
               String newPath = '$basePath/$name';
               try {
-                if (createFolder) {
-                  await _fileService.createDirectory(newPath);
-                } else {
-                  await _fileService.createFile(newPath);
-                }
-                _loadFiles(); // Refresh the tree after creating
+                if (createFolder) await _fileService.createDirectory(newPath);
+                else await _fileService.createFile(newPath);
+                _loadFiles();
               } catch (e) {
                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
               }
