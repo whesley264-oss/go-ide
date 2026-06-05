@@ -1,5 +1,5 @@
 name: flutter_go_ide
-description: A native Go IDE for Android.
+description: Mobile Code Editor - Spck-like IDE for Android
 version: 1.0.0
 
 environment:
@@ -8,17 +8,34 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_code_editor: ^0.3.5
+  
+  # Editor
+  re_editor: ^0.6.0
+  highlight: ^0.7.0
+  
+  # UI
   google_fonts: ^6.1.0
+  flutter_colorpicker: ^1.0.3
+  
+  # File handling
   file_picker: ^8.0.0
   path_provider: ^2.1.2
-  process_run: ^0.13.0
+  path: ^1.8.3
+  
+  # Terminal & Process
   xterm: ^4.0.0
+  process_run: ^0.13.0
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  
+  # Icons
   font_awesome_flutter: ^10.7.0
-
-flutter:
-  uses-material-design: true
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+flutter:
+  uses-material-design: true
