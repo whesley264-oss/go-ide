@@ -150,13 +150,12 @@ class _FileExplorerState extends State<FileExplorer> {
     final isSelected = widget.selectedPath == item.path;
     return InkWell(
       onTap: () async {
-        if (item.isCode) {
-          try {
-            final content = await _fileService.readFile(item.path);
-            widget.onFileOpen?.call(item.path, content);
-          } catch (e) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-          }
+        // Open ANY file in the editor (not just code files)
+        try {
+          final content = await _fileService.readFile(item.path);
+          widget.onFileOpen?.call(item.path, content);
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       },
       onLongPress: () => _showContextMenu(item),
@@ -175,12 +174,20 @@ class _FileExplorerState extends State<FileExplorer> {
   }
 
   IconData _getFileIcon(FileItem item) {
-    final colors = {'go': Icons.code, 'py': Icons.code, 'js': Icons.javascript, 'ts': Icons.javascript, 'html': Icons.html, 'css': Icons.css, 'json': Icons.data_object, 'md': Icons.article, 'dart': Icons.flutter_dash};
-    return colors[item.extension] ?? Icons.description;
+    final icons = {
+      'go': Icons.code, 'py': Icons.code, 'js': Icons.javascript, 'ts': Icons.javascript,
+      'html': Icons.html, 'css': Icons.css, 'json': Icons.data_object, 'md': Icons.article,
+      'dart': Icons.flutter_dash, 'txt': Icons.text_snippet, 'pdf': Icons.picture_as_pdf,
+      'png': Icons.image, 'jpg': Icons.image, 'jpeg': Icons.image, 'gif': Icons.image,
+    };
+    return icons[item.extension] ?? Icons.insert_drive_file;
   }
 
   Color _getFileColor(FileItem item) {
-    final colors = {'go': Colors.cyan, 'py': Colors.yellow, 'js': Colors.amber, 'ts': Colors.amber, 'html': Colors.orange, 'css': Colors.blue, 'json': Colors.grey};
+    final colors = {
+      'go': Colors.cyan, 'py': Colors.yellow, 'js': Colors.amber, 'ts': Colors.amber,
+      'html': Colors.orange, 'css': Colors.blue, 'json': Colors.grey, 'dart': Colors.blue,
+    };
     return colors[item.extension] ?? Colors.grey;
   }
 
@@ -198,7 +205,8 @@ class _FileExplorerState extends State<FileExplorer> {
             ListTile(leading: const Icon(Icons.edit), title: const Text('Rename'), onTap: () { Navigator.pop(ctx); _showRenameDialog(item); }),
             ListTile(leading: const Icon(Icons.content_copy), title: const Text('Copy'), onTap: () { Navigator.pop(ctx); setState(() { _clipboardItem = item; _cutMode = false; }); }),
             ListTile(leading: const Icon(Icons.content_cut), title: const Text('Cut'), onTap: () { Navigator.pop(ctx); setState(() { _clipboardItem = item; _cutMode = true; }); }),
-            if (_clipboardItem != null && item.type == FileType.directory) ListTile(leading: const Icon(Icons.paste), title: Text(_cutMode ? 'Move Here' : 'Paste Here'), onTap: () { Navigator.pop(ctx); _pasteItem(item.path); }),
+            if (_clipboardItem != null && item.type == FileType.directory)
+              ListTile(leading: const Icon(Icons.paste), title: Text(_cutMode ? 'Move Here' : 'Paste Here'), onTap: () { Navigator.pop(ctx); _pasteItem(item.path); }),
             const Divider(color: Colors.white12),
             ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); _showDeleteConfirm(item); }),
           ],
@@ -214,7 +222,13 @@ class _FileExplorerState extends State<FileExplorer> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.panelBg,
         title: Text(createFolder ? 'New Folder' : 'New File'),
-        content: TextField(controller: controller, autofocus: true, decoration: InputDecoration(hintText: createFolder ? 'folder name' : 'filename.go', suffix: createFolder ? null : const Text('.go', style: TextStyle(color: Colors.grey)))),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: createFolder ? 'folder name' : 'filename.txt',
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -222,13 +236,15 @@ class _FileExplorerState extends State<FileExplorer> {
               Navigator.pop(ctx);
               if (controller.text.isEmpty) return;
               String basePath = parentPath ?? _workspacePath ?? '';
-              String name = controller.text;
-              if (!createFolder && !name.contains('.')) name = '$name.go';
+              String name = controller.text.trim();
               String newPath = '$basePath/$name';
               try {
-                if (createFolder) await _fileService.createDirectory(newPath);
-                else await _fileService.createFile(newPath);
-                _loadFiles();
+                if (createFolder) {
+                  await _fileService.createDirectory(newPath);
+                } else {
+                  await _fileService.createFile(newPath);
+                }
+                _loadFiles(); // Refresh the tree after creating
               } catch (e) {
                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
               }
