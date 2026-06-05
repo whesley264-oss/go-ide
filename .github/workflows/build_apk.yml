@@ -23,16 +23,24 @@ jobs:
           ls -R android/ || echo "Android directory not created"
       - name: Inject Android Build Config
         run: |
-          # Find the gradle file using -path to properly match the path pattern
-          GRADLE_FILE=$(find . -type f -path "*/android/app/build.gradle" -name "build.gradle" 2>/dev/null | head -n 1)
+          # Find the gradle file - it could be .gradle (Groovy) or .gradle.kts (Kotlin DSL)
+          GRADLE_FILE=$(find . -type f \( -path "*/android/app/build.gradle" -o -path "*/android/app/build.gradle.kts" \) \( -name "build.gradle" -o -name "build.gradle.kts" \) 2>/dev/null | head -n 1)
           if [ -n "$GRADLE_FILE" ] && [ -f "$GRADLE_FILE" ]; then
             echo "Gradle file found at $GRADLE_FILE"
-            sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' "$GRADLE_FILE"
-            sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' "$GRADLE_FILE"
+            # Check if it's Kotlin DSL (.kts) or Groovy DSL
+            if [[ "$GRADLE_FILE" == *.kts ]]; then
+              echo "Detected Kotlin DSL (build.gradle.kts)"
+              sed -i 's/compileSdk(flutter.compileSdkVersion)/compileSdk(36)/' "$GRADLE_FILE"
+              sed -i '/defaultConfig {/a \        ndk {\n            abiFilters("armeabi-v7a", "arm64-v8a", "x86_64")\n        }' "$GRADLE_FILE"
+            else
+              echo "Detected Groovy DSL (build.gradle)"
+              sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' "$GRADLE_FILE"
+              sed -i '/defaultConfig {/a \        ndk {\n            abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"\n        }' "$GRADLE_FILE"
+            fi
           else
             echo "Gradle file not found!"
             echo "Directory contents:"
-            find . -type f -name "*.gradle" 2>/dev/null || echo "No gradle files found"
+            find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" \) 2>/dev/null || echo "No gradle files found"
             find . -type d -name "android" 2>/dev/null || echo "No android directories found"
             exit 1
           fi
