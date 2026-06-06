@@ -13,14 +13,14 @@ class _CodeEditorState extends State<CodeEditor> {
   final ScrollController _scrollController = ScrollController();
   int _lineCount = 1;
 
-  final List<_Token> _keywords = [
+  final List<String> _keywords = [
     'package', 'import', 'func', 'var', 'const', 'type', 'struct', 'interface',
     'if', 'else', 'for', 'range', 'switch', 'case', 'default', 'return',
     'break', 'continue', 'go', 'defer', 'select', 'chan', 'map', 'make', 'new',
     'true', 'false', 'nil', 'iota', 'fallthrough',
   ];
 
-  final List<_Token> _types = [
+  final List<String> _types = [
     'int', 'int8', 'int16', 'int32', 'int64', 'uint', 'uint8', 'uint16', 'uint32', 'uint64',
     'float32', 'float64', 'complex64', 'complex128', 'bool', 'byte', 'rune', 'string', 'error',
   ];
@@ -50,7 +50,6 @@ class _CodeEditorState extends State<CodeEditor> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Line numbers
           Container(
             width: 50,
             color: AppTheme.surface,
@@ -72,29 +71,21 @@ class _CodeEditorState extends State<CodeEditor> {
               ),
             ),
           ),
-          // Divider
           Container(width: 1, color: AppTheme.border),
-          // Code area
           Expanded(
             child: Stack(
               children: [
-                // Syntax highlighted view
                 SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: RichText(
                       text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontFamily: 'monospace',
-                          height: 1.57,
-                        ),
+                        style: const TextStyle(fontSize: 14, fontFamily: 'monospace', height: 1.57),
                         children: _highlightCode(_controller.text),
                       ),
                     ),
                   ),
                 ),
-                // Editable text field (invisible text)
                 TextField(
                   controller: _controller,
                   maxLines: null,
@@ -121,7 +112,6 @@ class _CodeEditorState extends State<CodeEditor> {
 
   List<TextSpan> _highlightCode(String code) {
     if (code.isEmpty) return [const TextSpan(text: '')];
-    
     final spans = <TextSpan>[];
     final buffer = StringBuffer();
     int i = 0;
@@ -172,7 +162,7 @@ class _CodeEditorState extends State<CodeEditor> {
         continue;
       }
 
-      // Words (keywords, types, identifiers)
+      // Words
       if (RegExp(r'[a-zA-Z_]').hasMatch(char)) {
         if (buffer.isNotEmpty) {
           spans.add(TextSpan(text: buffer.toString(), style: const TextStyle(color: AppTheme.textPrimary)));
@@ -186,7 +176,7 @@ class _CodeEditorState extends State<CodeEditor> {
           spans.add(TextSpan(text: word, style: const TextStyle(color: AppTheme.accentBlue)));
         } else if (_types.contains(word)) {
           spans.add(TextSpan(text: word, style: const TextStyle(color: AppTheme.accentGreen)));
-        } else if (word[0].toUpperCase() == word[0]) {
+        } else if (word.isNotEmpty && word[0] == word[0].toUpperCase()) {
           spans.add(TextSpan(text: word, style: const TextStyle(color: AppTheme.accentYellow)));
         } else {
           spans.add(TextSpan(text: word, style: const TextStyle(color: AppTheme.textPrimary)));
@@ -205,10 +195,4 @@ class _CodeEditorState extends State<CodeEditor> {
 
     return spans;
   }
-}
-
-class _Token {
-  final String text;
-  final Color color;
-  _Token(this.text, this.color);
 }
