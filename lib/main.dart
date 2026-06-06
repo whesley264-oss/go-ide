@@ -78,7 +78,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildIconSidebar() {
     return Container(
       width: 48,
-      color: AppTheme.activityBarBg,
+      color: AppTheme.sidebarBg,
       child: Column(
         children: [
           const SizedBox(height: 8),
@@ -178,7 +178,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildEditorToolbar() {
     return Container(
       height: 40,
-      color: AppTheme.editorGroupHeaderBg,
+      color: AppTheme.sidebarBg,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
