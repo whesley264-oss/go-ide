@@ -74,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildLandscapeLayout(BoxConstraints constraints) {
-    final sidebarWidth = constraints.maxWidth * 0.2; // 20% for sidebar
+    final sidebarWidth = constraints.maxWidth * 0.2 as double; // 20% for sidebar
     final sidebar = sidebarWidth.clamp(180.0, 280.0);
     final editorWidth = constraints.maxWidth - sidebar - (_showTerminal ? constraints.maxHeight * 0.3 : 0);
     
@@ -109,7 +109,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               if (_showTerminal)
                 SizedBox(
-                  width: (_showTerminal ? constraints.maxHeight * 0.35 : 0).clamp(120.0, 400.0),
+                  width: _showTerminal ? (constraints.maxHeight * 0.35).clamp(120.0, 400.0) : 0.0,
                   child: _buildTerminal(),
                 ),
             ],
