@@ -11,12 +11,6 @@ import 'services/code_execution_service.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
   runApp(const CodeEditorApp());
 }
 
@@ -45,213 +39,96 @@ class _MainScreenState extends State<MainScreen> {
   final FileService _fileService = FileService();
   final CodeExecutionService _executionService = CodeExecutionService();
   final GlobalKey<TerminalWidgetState> _terminalKey = GlobalKey();
-  
+
   String? _currentFilePath;
   String _currentContent = '';
   String _unsavedContent = '';
 
-  bool _showExplorer = true;
-  bool _showTerminal = false;
-  bool _showGit = false;
+  int _selectedSidebarItem = 0; // 0 = Explorer, 1 = Git, 2 = Search
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isLandscape = constraints.maxWidth > constraints.maxHeight;
-            
-            if (isLandscape) {
-              return _buildLandscapeLayout(constraints);
-            } else {
-              return _buildPortraitLayout(constraints);
-            }
-          },
+        child: Row(
+          children: [
+            // Left sidebar (VS Code style icons)
+            _buildIconSidebar(),
+            // File Explorer or Git Panel
+            _buildSidebarContent(),
+            // Vertical divider
+            Container(width: 1, color: Colors.white10),
+            // Main editor + terminal
+            Expanded(
+              child: Column(
+                children: [
+                  _buildEditorToolbar(),
+                  Expanded(child: _buildEditorArea()),
+                  if (_showTerminal) _buildTerminal(),
+                  _buildStatusBar(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLandscapeLayout(BoxConstraints constraints) {
-    final sidebarWidth = constraints.maxWidth * 0.2 as double; // 20% for sidebar
-    final sidebar = sidebarWidth.clamp(180.0, 280.0);
-    final editorWidth = constraints.maxWidth - sidebar - (_showTerminal ? constraints.maxHeight * 0.3 : 0);
-    
-    return Column(
-      children: [
-        _buildToolbar(),
-        Expanded(
-          child: Row(
-            children: [
-              // Sidebar (Explorer or Git)
-              if (_showExplorer && !_showGit)
-                SizedBox(width: sidebar, child: _buildExplorer())
-              else if (_showGit)
-                SizedBox(width: sidebar, child: _buildGitPanel()),
-              if (_showExplorer || _showGit)
-                _buildResizeHandle(
-                  onDrag: (dx) {
-                    // Handle sidebar resize if needed
-                  },
-                ),
-              // Editor
-              Expanded(
-                child: _buildEditor(),
-              ),
-              // Terminal
-              if (_showTerminal)
-                _buildResizeHandle(
-                  axis: Axis.vertical,
-                  onDrag: (dy) {
-                    // Handle terminal resize if needed
-                  },
-                ),
-              if (_showTerminal)
-                SizedBox(
-                  width: _showTerminal ? (constraints.maxHeight * 0.35).clamp(120.0, 400.0) : 0.0,
-                  child: _buildTerminal(),
-                ),
-            ],
-          ),
-        ),
-        _buildStatusBar(),
-      ],
-    );
-  }
-
-  Widget _buildPortraitLayout(BoxConstraints constraints) {
-    return Column(
-      children: [
-        _buildToolbar(),
-        // Main content area
-        Expanded(
-          child: IndexedStack(
-            index: _getActivePanel(),
-            children: [
-              _buildExplorer(),
-              _buildEditor(),
-              _buildGitPanel(),
-            ],
-          ),
-        ),
-        // Bottom panel (terminal or tabs)
-        if (_showTerminal) SizedBox(height: constraints.maxHeight * 0.3, child: _buildTerminal()),
-        _buildStatusBar(),
-      ],
-    );
-  }
-
-  int _getActivePanel() {
-    if (_showGit) return 2;
-    if (_showExplorer) return 0;
-    return 1;
-  }
-
-  Widget _buildToolbar() {
+  Widget _buildIconSidebar() {
     return Container(
-      height: 56,
-      color: AppTheme.sidebarBg,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
+      width: 48,
+      color: AppTheme.activityBarBg,
+      child: Column(
         children: [
-          _buildToolbarButton(
-            icon: Icons.folder_outlined,
-            label: 'Files',
-            isActive: _showExplorer && !_showGit,
-            onTap: () => setState(() {
-              _showExplorer = !_showExplorer;
-              if (_showExplorer) _showGit = false;
-            }),
-          ),
-          _buildToolbarButton(
-            icon: Icons.account_tree_outlined,
-            label: 'Git',
-            isActive: _showGit,
-            onTap: () => setState(() {
-              _showGit = !_showGit;
-              if (_showGit) _showExplorer = false;
-            }),
-          ),
-          const SizedBox(width: 8),
-          Container(width: 1, height: 32, color: Colors.white12),
-          const SizedBox(width: 8),
-          _buildToolbarButton(
-            icon: _showTerminal ? Icons.terminal : Icons.terminal_outlined,
-            label: 'Output',
-            isActive: _showTerminal,
-            onTap: () => setState(() => _showTerminal = !_showTerminal),
-          ),
+          const SizedBox(height: 8),
+          _buildSidebarIcon(Icons.folder_outlined, 0, tooltip: 'Explorer'),
+          _buildSidebarIcon(Icons.account_tree_outlined, 1, tooltip: 'Git'),
+          _buildSidebarIcon(Icons.search, 2, tooltip: 'Search'),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.play_arrow, color: Colors.green),
-            onPressed: _runCode,
-            tooltip: 'Run',
-          ),
-          IconButton(
-            icon: const Icon(Icons.save_outlined),
-            onPressed: _currentFilePath != null ? _saveFile : null,
-            tooltip: 'Save',
-          ),
+          _buildSidebarIcon(Icons.settings, 3, tooltip: 'Settings'),
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildToolbarButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Material(
-        color: isActive ? AppTheme.selection : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: isActive ? Colors.white : Colors.grey),
-                const SizedBox(width: 6),
-                Text(label, style: TextStyle(fontSize: 13, color: isActive ? Colors.white : Colors.grey)),
-              ],
+  Widget _buildSidebarIcon(IconData icon, int index, {String? tooltip}) {
+    final isSelected = _selectedSidebarItem == index;
+    return Tooltip(
+      message: tooltip ?? '',
+      child: InkWell(
+        onTap: () => setState(() => _selectedSidebarItem = index),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: isSelected ? Colors.white : Colors.transparent,
+                width: 2,
+              ),
             ),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: isSelected ? Colors.white : Colors.grey,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildResizeHandle({Axis axis = Axis.horizontal, required Function(double) onDrag}) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onPanUpdate: (details) {
-        if (axis == Axis.horizontal) {
-          onDrag(details.delta.dx);
-        } else {
-          onDrag(details.delta.dy);
-        }
-      },
-      child: Container(
-        width: axis == Axis.horizontal ? 6 : double.infinity,
-        height: axis == Axis.horizontal ? double.infinity : 6,
-        color: Colors.transparent,
-        child: Center(
-          child: Container(
-            width: axis == Axis.horizontal ? 2 : 40,
-            height: axis == Axis.horizontal ? 40 : 2,
-            decoration: BoxDecoration(
-              color: Colors.white12,
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-        ),
-      ),
+  Widget _buildSidebarContent() {
+    return Container(
+      width: 250,
+      color: AppTheme.sidebarBg,
+      child: _selectedSidebarItem == 0
+          ? _buildExplorer()
+          : _selectedSidebarItem == 1
+              ? _buildGitPanel()
+              : _buildSearchPanel(),
     );
   }
 
@@ -263,14 +140,97 @@ class _MainScreenState extends State<MainScreen> {
           _currentFilePath = path;
           _currentContent = content;
           _unsavedContent = content;
-          // In portrait mode, switch to editor when file opened
-          _showExplorer = false;
         });
       },
     );
   }
 
-  Widget _buildEditor() {
+  Widget _buildGitPanel() {
+    return GitPanelWidget(
+      repoPath: _currentFilePath != null 
+          ? _currentFilePath!.substring(0, _currentFilePath!.lastIndexOf('/'))
+          : null,
+    );
+  }
+
+  Widget _buildSearchPanel() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.white12)),
+          ),
+          child: const Text(
+            'SEARCH',
+            style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const Expanded(
+          child: Center(
+            child: Text('Search coming soon', style: TextStyle(color: Colors.grey)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditorToolbar() {
+    return Container(
+      height: 40,
+      color: AppTheme.editorGroupHeaderBg,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          if (_currentFilePath != null) ...[
+            Text(
+              _currentFilePath!.split('/').last,
+              style: const TextStyle(fontSize: 13, color: Colors.white),
+            ),
+            if (_unsavedContent != _currentContent)
+              const Text(' *', style: TextStyle(color: Colors.orange)),
+          ] else
+            const Text('No file open', style: TextStyle(color: Colors.grey)),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.play_arrow, size: 20),
+            onPressed: _currentFilePath != null ? _runCode : null,
+            tooltip: 'Run',
+            color: Colors.green,
+          ),
+          IconButton(
+            icon: const Icon(Icons.save, size: 20),
+            onPressed: _currentFilePath != null ? _saveFile : null,
+            tooltip: 'Save',
+          ),
+          IconButton(
+            icon: Icon(_showTerminal ? Icons.terminal : Icons.terminal_outlined, size: 20),
+            onPressed: () => setState(() => _showTerminal = !_showTerminal),
+            tooltip: 'Toggle Terminal',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditorArea() {
+    if (_currentFilePath == null) {
+      return Container(
+        color: AppTheme.editorBg,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.code, size: 64, color: Colors.white12),
+              SizedBox(height: 16),
+              Text('Open a file to start editing', style: TextStyle(color: Colors.grey, fontSize: 16)),
+              SizedBox(height: 8),
+              Text('Click on a file in the Explorer', style: TextStyle(color: Colors.white38, fontSize: 13)),
+            ],
+          ),
+        ),
+      );
+    }
     return EditorPanel(
       filePath: _currentFilePath,
       initialContent: _currentContent,
@@ -282,41 +242,40 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildGitPanel() {
-    final repoPath = _currentFilePath != null
-        ? _currentFilePath!.substring(0, _currentFilePath!.lastIndexOf('/'))
-        : null;
-    return GitPanel(repoPath: repoPath);
-  }
+  bool _showTerminal = false;
 
   Widget _buildTerminal() {
-    return TerminalWidget(key: _terminalKey);
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        // Future: resize terminal
+      },
+      child: Container(
+        height: 200,
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white12)),
+        ),
+        child: TerminalWidget(key: _terminalKey),
+      ),
+    );
   }
 
   Widget _buildStatusBar() {
     return Container(
-      height: 28,
+      height: 24,
       color: AppTheme.statusBarBg,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
           if (_currentFilePath != null) ...[
-            const Icon(Icons.description, size: 14, color: Colors.white70),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                _currentFilePath!.split('/').last,
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
-                overflow: TextOverflow.ellipsis,
-              ),
+            Text(
+              _currentFilePath!.split('/').last,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
             ),
-          ] else
-            const Expanded(
-              child: Text('No file open', style: TextStyle(fontSize: 12, color: Colors.white54)),
-            ),
-          const SizedBox(width: 16),
+            const SizedBox(width: 16),
+          ],
+          const Spacer(),
           Text(
-            _getFileType(),
+            _getLanguage(),
             style: const TextStyle(fontSize: 12, color: Colors.white54),
           ),
         ],
@@ -324,7 +283,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  String _getFileType() {
+  String _getLanguage() {
     if (_currentFilePath == null) return '';
     final ext = _currentFilePath!.split('.').last.toUpperCase();
     return ext;
@@ -350,30 +309,18 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _runCode() async {
-    if (_currentFilePath == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Save and open a file first')),
-        );
-      }
-      return;
-    }
-    
+    if (_currentFilePath == null) return;
     await _saveFile();
-    
     if (!_showTerminal) setState(() => _showTerminal = true);
-    
-    _terminalKey.currentState?.write('> Running ${_currentFilePath!.split('/').last}...');
-    
+    _terminalKey.currentState?.write('> Running ${_currentFilePath!.split('/').last}...\n');
     final result = await _executionService.execute(
       _currentFilePath!,
-      onOutput: (data) => _terminalKey.currentState?.write(data),
+      onOutput: (data) => _terminalKey.currentState?.write('$data\n'),
     );
-    
     if (result.exitCode == 0) {
-      _terminalKey.currentState?.write('\n✓ Completed in ${result.duration.inMilliseconds}ms');
+      _terminalKey.currentState?.write('Done in ${result.duration.inMilliseconds}ms\n');
     } else {
-      _terminalKey.currentState?.write('\n✗ Exit code: ${result.exitCode}');
+      _terminalKey.currentState?.write('Exit code: ${result.exitCode}\n');
     }
   }
 }
