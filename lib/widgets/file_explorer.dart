@@ -8,7 +8,11 @@ class FileExplorer extends StatefulWidget {
   final Function(String path, String content)? onFileOpen;
   final String? selectedPath;
 
-  const FileExplorer({super.key, this.onFileOpen, this.selectedPath});
+  const FileExplorer({
+    super.key,
+    this.onFileOpen,
+    this.selectedPath,
+  });
 
   @override
   State<FileExplorer> createState() => _FileExplorerState();
@@ -66,10 +70,22 @@ class _FileExplorerState extends State<FileExplorer> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white12))),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.white12)),
+      ),
       child: Row(
         children: [
-          const Expanded(child: Text('EXPLORER', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1))),
+          const Expanded(
+            child: Text(
+              'EXPLORER',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
           _iconBtn(Icons.refresh, _loadFiles),
           _iconBtn(Icons.create_new_folder, () => _showCreateDialog(createFolder: true)),
           _iconBtn(Icons.note_add, () => _showCreateDialog(createFolder: false)),
@@ -79,7 +95,14 @@ class _FileExplorerState extends State<FileExplorer> {
   }
 
   Widget _iconBtn(IconData icon, VoidCallback onTap) {
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(4), child: Padding(padding: const EdgeInsets.all(4), child: Icon(icon, size: 16, color: Colors.grey)));
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(icon, size: 16, color: Colors.grey),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
@@ -91,8 +114,16 @@ class _FileExplorerState extends State<FileExplorer> {
           const SizedBox(height: 8),
           const Text('No files', style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 16),
-          TextButton.icon(icon: const Icon(Icons.add, size: 18), label: const Text('New File'), onPressed: () => _showCreateDialog(createFolder: false)),
-          TextButton.icon(icon: const Icon(Icons.create_new_folder, size: 18), label: const Text('New Folder'), onPressed: () => _showCreateDialog(createFolder: true)),
+          TextButton.icon(
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New File'),
+            onPressed: () => _showCreateDialog(createFolder: false),
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.create_new_folder, size: 18),
+            label: const Text('New Folder'),
+            onPressed: () => _showCreateDialog(createFolder: true),
+          ),
         ],
       ),
     );
@@ -101,14 +132,27 @@ class _FileExplorerState extends State<FileExplorer> {
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.white12))),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.white12)),
+      ),
       child: Row(
         children: [
-          Expanded(child: Text(_workspacePath?.split('/').last ?? 'workspace', style: const TextStyle(fontSize: 11, color: Colors.grey))),
+          Expanded(
+            child: Text(
+              _workspacePath?.split('/').last ?? 'workspace',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ),
           if (_clipboardItem != null) ...[
-            Text(_cutMode ? 'Cut' : 'Copy', style: const TextStyle(fontSize: 10, color: Colors.amber)),
+            Text(
+              _cutMode ? 'Cut' : 'Copy',
+              style: const TextStyle(fontSize: 10, color: Colors.amber),
+            ),
             const SizedBox(width: 4),
-            InkWell(onTap: () => setState(() => _clipboardItem = null), child: const Icon(Icons.close, size: 14, color: Colors.grey)),
+            InkWell(
+              onTap: () => setState(() => _clipboardItem = null),
+              child: const Icon(Icons.close, size: 14, color: Colors.grey),
+            ),
           ],
         ],
       ),
@@ -125,23 +169,38 @@ class _FileExplorerState extends State<FileExplorer> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: () => setState(() => item.isExpanded = !item.isExpanded),
+          onTap: () {
+            setState(() => item.isExpanded = !item.isExpanded);
+          },
           onLongPress: () => _showContextMenu(item),
           child: Padding(
             padding: EdgeInsets.only(left: depth * 16.0),
             child: Row(
               children: [
-                Icon(item.isExpanded ? Icons.expand_more : Icons.chevron_right, size: 16, color: Colors.grey),
-                Icon(item.isExpanded ? Icons.folder_open : Icons.folder, size: 16, color: Colors.amber),
+                Icon(
+                  item.isExpanded ? Icons.expand_more : Icons.chevron_right,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                Icon(
+                  item.isExpanded ? Icons.folder_open : Icons.folder,
+                  size: 16,
+                  color: Colors.amber,
+                ),
                 const SizedBox(width: 4),
-                Expanded(child: Text(item.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
-                _iconBtn(Icons.create_new_folder, () => _showCreateDialog(parentPath: item.path, createFolder: true)),
-                _iconBtn(Icons.note_add, () => _showCreateDialog(parentPath: item.path, createFolder: false)),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    style: const TextStyle(fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        if (item.isExpanded) ...item.children.map((child) => _buildFileTree(child, depth + 1)),
+        if (item.isExpanded)
+          ...item.children.map((child) => _buildFileTree(child, depth + 1)),
       ],
     );
   }
@@ -158,7 +217,16 @@ class _FileExplorerState extends State<FileExplorer> {
           children: [
             Icon(_getFileIcon(item), size: 16, color: _getFileColor(item)),
             const SizedBox(width: 4),
-            Expanded(child: Text(item.name, style: TextStyle(fontSize: 13, color: item.isCode ? Colors.white : Colors.grey), overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Text(
+                item.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: item.isCode ? Colors.white : Colors.grey,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -168,30 +236,42 @@ class _FileExplorerState extends State<FileExplorer> {
   Future<void> _openFile(FileItem item) async {
     try {
       final content = await _fileService.readFile(item.path);
-      if (widget.onFileOpen != null) {
-        widget.onFileOpen!(item.path, content);
-      }
+      widget.onFileOpen?.call(item.path, content);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening file: $e')),
+        );
       }
     }
   }
 
   IconData _getFileIcon(FileItem item) {
     final icons = {
-      'go': Icons.code, 'py': Icons.code, 'js': Icons.javascript, 'ts': Icons.javascript,
-      'html': Icons.html, 'css': Icons.css, 'json': Icons.data_object, 'md': Icons.article,
-      'dart': Icons.flutter_dash, 'txt': Icons.text_snippet, 'pdf': Icons.picture_as_pdf,
-      'png': Icons.image, 'jpg': Icons.image, 'jpeg': Icons.image, 'gif': Icons.image,
+      'go': Icons.code,
+      'py': Icons.code,
+      'js': Icons.javascript,
+      'ts': Icons.javascript,
+      'html': Icons.html,
+      'css': Icons.css,
+      'json': Icons.data_object,
+      'md': Icons.article,
+      'dart': Icons.flutter_dash,
+      'txt': Icons.text_snippet,
     };
     return icons[item.extension] ?? Icons.insert_drive_file;
   }
 
   Color _getFileColor(FileItem item) {
     final colors = {
-      'go': Colors.cyan, 'py': Colors.yellow, 'js': Colors.amber, 'ts': Colors.amber,
-      'html': Colors.orange, 'css': Colors.blue, 'json': Colors.grey, 'dart': Colors.blue,
+      'go': Colors.cyan,
+      'py': Colors.yellow,
+      'js': Colors.amber,
+      'ts': Colors.amber,
+      'html': Colors.orange,
+      'css': Colors.blue,
+      'json': Colors.grey,
+      'dart': Colors.blue,
     };
     return colors[item.extension] ?? Colors.grey;
   }
@@ -204,16 +284,76 @@ class _FileExplorerState extends State<FileExplorer> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.add), title: const Text('New File Here'), onTap: () { Navigator.pop(ctx); _showCreateDialog(parentPath: item.type == FileType.directory ? item.path : null); }),
-            ListTile(leading: const Icon(Icons.create_new_folder), title: const Text('New Folder Here'), onTap: () { Navigator.pop(ctx); _showCreateDialog(parentPath: item.type == FileType.directory ? item.path : null, createFolder: true); }),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('New File Here'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showCreateDialog(
+                  parentPath: item.type == FileType.directory ? item.path : null,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.create_new_folder),
+              title: const Text('New Folder Here'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showCreateDialog(
+                  parentPath: item.type == FileType.directory ? item.path : null,
+                  createFolder: true,
+                );
+              },
+            ),
             const Divider(color: Colors.white12),
-            ListTile(leading: const Icon(Icons.edit), title: const Text('Rename'), onTap: () { Navigator.pop(ctx); _showRenameDialog(item); }),
-            ListTile(leading: const Icon(Icons.content_copy), title: const Text('Copy'), onTap: () { Navigator.pop(ctx); setState(() { _clipboardItem = item; _cutMode = false; }); }),
-            ListTile(leading: const Icon(Icons.content_cut), title: const Text('Cut'), onTap: () { Navigator.pop(ctx); setState(() { _clipboardItem = item; _cutMode = true; }); }),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Rename'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRenameDialog(item);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('Copy'),
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _clipboardItem = item;
+                  _cutMode = false;
+                });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_cut),
+              title: const Text('Cut'),
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _clipboardItem = item;
+                  _cutMode = true;
+                });
+              },
+            ),
             if (_clipboardItem != null && item.type == FileType.directory)
-              ListTile(leading: const Icon(Icons.paste), title: Text(_cutMode ? 'Move Here' : 'Paste Here'), onTap: () { Navigator.pop(ctx); _pasteItem(item.path); }),
+              ListTile(
+                leading: const Icon(Icons.paste),
+                title: Text(_cutMode ? 'Move Here' : 'Paste Here'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pasteItem(item.path);
+                },
+              ),
             const Divider(color: Colors.white12),
-            ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(ctx); _showDeleteConfirm(item); }),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showDeleteConfirm(item);
+              },
+            ),
           ],
         ),
       ),
@@ -230,10 +370,15 @@ class _FileExplorerState extends State<FileExplorer> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: InputDecoration(hintText: createFolder ? 'folder name' : 'filename.txt'),
+          decoration: InputDecoration(
+            hintText: createFolder ? 'folder name' : 'filename.txt',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -242,11 +387,18 @@ class _FileExplorerState extends State<FileExplorer> {
               String name = controller.text.trim();
               String newPath = '$basePath/$name';
               try {
-                if (createFolder) await _fileService.createDirectory(newPath);
-                else await _fileService.createFile(newPath);
+                if (createFolder) {
+                  await _fileService.createDirectory(newPath);
+                } else {
+                  await _fileService.createFile(newPath);
+                }
                 _loadFiles();
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               }
             },
             child: const Text('Create'),
@@ -263,9 +415,15 @@ class _FileExplorerState extends State<FileExplorer> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.panelBg,
         title: const Text('Rename'),
-        content: TextField(controller: controller, autofocus: true),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -276,7 +434,11 @@ class _FileExplorerState extends State<FileExplorer> {
                 await _fileService.rename(item.path, newPath);
                 _loadFiles();
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               }
             },
             child: const Text('Rename'),
@@ -292,9 +454,15 @@ class _FileExplorerState extends State<FileExplorer> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.panelBg,
         title: const Text('Delete'),
-        content: Text('Delete "${item.name}"? This cannot be undone.', style: const TextStyle(color: Colors.white70)),
+        content: Text(
+          'Delete "${item.name}"? This cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -324,12 +492,22 @@ class _FileExplorerState extends State<FileExplorer> {
       counter++;
     }
     try {
-      if (_cutMode) await _fileService.move(_clipboardItem!.path, newPath);
-      else await _fileService.copy(_clipboardItem!.path, newPath);
-      setState(() { _clipboardItem = null; _cutMode = false; });
+      if (_cutMode) {
+        await _fileService.move(_clipboardItem!.path, newPath);
+      } else {
+        await _fileService.copy(_clipboardItem!.path, newPath);
+      }
+      setState(() {
+        _clipboardItem = null;
+        _cutMode = false;
+      });
       _loadFiles();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 }
